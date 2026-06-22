@@ -109,7 +109,8 @@ class CliRunnerService(
             val latency = elapsedMs(started)
 
             return if (exit == 0 && response.isNotBlank()) {
-                RunResult("ok", response, err.ifBlank { null }, exit, latency)
+                // 성공 시 stderr 노이즈(codex 의 세션/토큰 로그 등)는 버려 페이로드를 깔끔히.
+                RunResult("ok", response, null, exit, latency)
             } else {
                 val msg = err.ifBlank { stdout.ifBlank { "exit=$exit, 빈 응답" } }
                 RunResult("error", response.ifBlank { null }, msg, exit, latency)

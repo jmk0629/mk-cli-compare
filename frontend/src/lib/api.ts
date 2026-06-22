@@ -89,6 +89,10 @@ export const getRecentComparisons = (): Promise<Comparison[]> =>
 export const getMyComparisons = (): Promise<Comparison[]> =>
   request("/api/me/comparisons", ComparisonListSchema);
 
+/** SSE 스트림 URL(EventSource 용). 진행 중 비교를 실시간으로 받는다. */
+export const comparisonStreamUrl = (id: number): string =>
+  `${API_BASE}/api/comparisons/${id}/stream`;
+
 // ── Vote ──
 export const castVote = (
   comparisonId: number,

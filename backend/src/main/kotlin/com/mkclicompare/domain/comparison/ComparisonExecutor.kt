@@ -21,6 +21,7 @@ class ComparisonExecutor(
     private val comparisonRepository: ComparisonRepository,
     private val runRepository: ComparisonRunRepository,
     private val cliRunner: CliRunnerService,
+    private val streamService: ComparisonStreamService,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -63,6 +64,7 @@ class ComparisonExecutor(
         run.latencyMs = result.latencyMs
         run.charCount = result.responseText?.length
         runRepository.save(run)
+        publishSnapshot(run.comparisonId, "update")
     }
 
     @Transactional
@@ -72,5 +74,13 @@ class ComparisonExecutor(
         comparison.status = if (runs.any { it.status == "ok" }) "done" else "error"
         comparison.completedAt = Instant.now().toString()
         comparisonRepository.save(comparison)
+        streamService.complete(comparisonId, ComparisonSnapshot.of(comparison, runs))
+    }
+
+    /** 현재 상태 스냅샷을 SSE 구독자에게 푸시(run 완료 즉시). */
+    private fun publishSnapshot(comparisonId: Long, event: String) {
+        val comparison = comparisonRepository.findById(comparisonId).orElse(null) ?: return
+        val runs = runRepository.findByComparisonId(comparisonId)
+        streamService.publish(comparisonId, event, ComparisonSnapshot.of(comparison, runs))
     }
 }

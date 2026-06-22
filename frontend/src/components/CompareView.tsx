@@ -4,12 +4,21 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   CATEGORIES,
   Comparison,
+  ComparisonSchema,
   DIMENSIONS,
   Dimension,
   Preset,
   Provider,
 } from "@/lib/api-types";
-import { castVote, createComparison, getComparison, getPresets, getProviders, ApiError } from "@/lib/api";
+import {
+  castVote,
+  comparisonStreamUrl,
+  createComparison,
+  getComparison,
+  getPresets,
+  getProviders,
+  ApiError,
+} from "@/lib/api";
 import { getGuestKey } from "@/lib/auth";
 import ResultCard from "./ResultCard";
 import ShareButton from "./ShareButton";
@@ -95,24 +104,62 @@ export default function CompareView() {
     if (result?.id) resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [result?.id]);
 
-  // 결과가 pending 이면 1.5s 마다 폴링해 카드를 점진적으로 갱신. done/error 면 중단.
+  // 진행 중(pending)이면 SSE 로 실시간 수신. 실패하면 1.5s 폴링으로 폴백.
   useEffect(() => {
     if (!result || result.status !== "pending") return;
     const id = result.id;
-    pollRef.current = setInterval(async () => {
+    let es: EventSource | null = null;
+    let finished = false;
+
+    const apply = (raw: string) => {
       try {
-        const fresh = await getComparison(id);
+        const fresh = ComparisonSchema.parse(JSON.parse(raw));
         setResult(fresh);
-        if (fresh.status !== "pending" && pollRef.current) {
-          clearInterval(pollRef.current);
-          pollRef.current = null;
+        if (fresh.status !== "pending") {
+          finished = true;
+          es?.close();
+          if (pollRef.current) clearInterval(pollRef.current);
         }
       } catch {
-        /* 일시 실패는 다음 폴링에서 재시도 */
+        /* 파싱 실패 무시 */
       }
-    }, 1500);
+    };
+
+    const startPoll = () => {
+      if (finished || pollRef.current) return;
+      pollRef.current = setInterval(async () => {
+        try {
+          const fresh = await getComparison(id);
+          setResult(fresh);
+          if (fresh.status !== "pending" && pollRef.current) {
+            clearInterval(pollRef.current);
+            pollRef.current = null;
+          }
+        } catch {
+          /* 다음 폴링에서 재시도 */
+        }
+      }, 1500);
+    };
+
+    try {
+      es = new EventSource(comparisonStreamUrl(id));
+      es.addEventListener("update", (e) => apply((e as MessageEvent).data));
+      es.addEventListener("done", (e) => apply((e as MessageEvent).data));
+      es.onerror = () => {
+        es?.close();
+        if (!finished) startPoll(); // SSE 끊김 → 폴링 폴백
+      };
+    } catch {
+      startPoll();
+    }
+
     return () => {
-      if (pollRef.current) clearInterval(pollRef.current);
+      finished = true;
+      es?.close();
+      if (pollRef.current) {
+        clearInterval(pollRef.current);
+        pollRef.current = null;
+      }
     };
   }, [result?.id, result?.status]);
 

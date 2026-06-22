@@ -1,0 +1,46 @@
+# macOS
+.DS_Store
+
+# Secrets (OAuth/JWT/API keys — NEVER commit)
+.env
+.env.local
+.env.*.local
+.env.example
+
+# Claude Code local config
+.claude/settings.local.json
+
+# Logs
+*.log
+logs/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# === Backend (Kotlin / Gradle) ===
+backend/.gradle/
+backend/build/
+backend/out/
+backend/bin/
+backend/HELP.md
+backend/data/
+backend/*.db
+backend/*.db-journal
+backend/*.db-shm
+backend/*.db-wal
+
+# === Frontend (Next.js / Node) ===
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/.turbo/
+frontend/coverage/
+frontend/next-env.d.ts
+frontend/*.tsbuildinfo
+frontend/.env*.local
+
+# Generated reports (.claude skills/agents)
+reports/
+.gstack/

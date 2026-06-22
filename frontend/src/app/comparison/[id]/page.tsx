@@ -10,6 +10,7 @@ import Markdown from "@/components/Markdown";
 import CopyButton from "@/components/CopyButton";
 import ShareButton from "@/components/ShareButton";
 import JudgePanel from "@/components/JudgePanel";
+import MetricsPanel from "@/components/MetricsPanel";
 
 /** 비교 상세 — 한 비교의 모든 데이터(프롬프트, provider별 전체 응답·지표·에러)를 펼쳐 본다. */
 export default function ComparisonDetailPage() {
@@ -107,6 +108,9 @@ export default function ComparisonDetailPage() {
               </tbody>
             </table>
           </section>
+
+          {/* 정량 비교 */}
+          <MetricsPanel runs={comparison.runs} providers={providers} />
 
           {/* AI 자동 심판 */}
           {comparison.runs.filter((r) => r.status === "ok").length >= 2 && (

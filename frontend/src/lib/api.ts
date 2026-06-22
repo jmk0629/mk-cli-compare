@@ -7,6 +7,8 @@ import {
   Dimension,
   GeneratedPrompt,
   GeneratedPromptSchema,
+  H2h,
+  H2hSchema,
   JudgeVerdict,
   JudgeVerdictSchema,
   Leaderboard,
@@ -137,6 +139,8 @@ export const getLeaderboard = (category?: string, dimension?: string): Promise<L
   const q = qs.toString();
   return request(`/api/leaderboard${q ? `?${q}` : ""}`, LeaderboardSchema);
 };
+
+export const getHeadToHead = (): Promise<H2h> => request("/api/leaderboard/h2h", H2hSchema);
 
 // ── Stats ──
 export const getStats = (): Promise<Stats> => request("/api/stats", StatsSchema);

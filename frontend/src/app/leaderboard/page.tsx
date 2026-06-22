@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { getLeaderboard, getStats } from "@/lib/api";
 import { Ranking, DIMENSIONS, CATEGORIES, Stats } from "@/lib/api-types";
 import { providerEmoji } from "@/lib/providers";
+import H2hMatrix from "@/components/H2hMatrix";
 
 export default function LeaderboardPage() {
   const [rankings, setRankings] = useState<Ranking[] | null>(null);
@@ -132,6 +133,9 @@ export default function LeaderboardPage() {
           </div>
         ))}
       </div>
+
+      {/* 1:1 승률 매트릭스 */}
+      <H2hMatrix />
     </div>
   );
 }

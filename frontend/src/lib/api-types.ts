@@ -90,6 +90,14 @@ export const LeaderboardSchema = z.object({
 });
 export type Leaderboard = z.infer<typeof LeaderboardSchema>;
 
+export const H2hSchema = z.object({
+  providers: z.array(
+    z.object({ id: z.string(), displayName: z.string(), color: z.string(), value: z.number() }),
+  ),
+  pairs: z.array(z.object({ winner: z.string(), loser: z.string(), wins: z.number() })),
+});
+export type H2h = z.infer<typeof H2hSchema>;
+
 export const ProviderBriefSchema = z.object({
   id: z.string(),
   displayName: z.string(),

@@ -19,4 +19,18 @@ interface VoteRepository : JpaRepository<Vote, Long> {
             "GROUP BY v.winnerProviderId, v.dimension",
     )
     fun aggregateWinsFiltered(category: String?, dimension: String?): List<Array<Any>>
+
+    /**
+     * 1:1(head-to-head) 집계: 한 투표는 winner 가 같은 비교의 다른 ok 참가자들을 각각 이긴 것.
+     * [winnerProviderId, loserProviderId, count] 행.
+     */
+    @Query(
+        "SELECT v.winnerProviderId, r.providerId, COUNT(v) " +
+            "FROM Vote v, ComparisonRun r " +
+            "WHERE r.comparisonId = v.comparisonId " +
+            "AND r.providerId <> v.winnerProviderId " +
+            "AND r.status = 'ok' " +
+            "GROUP BY v.winnerProviderId, r.providerId",
+    )
+    fun aggregateHeadToHead(): List<Array<Any>>
 }

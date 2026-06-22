@@ -8,6 +8,7 @@ import { CATEGORIES, Comparison, Provider, Run } from "@/lib/api-types";
 import { providerEmoji } from "@/lib/providers";
 import Markdown from "@/components/Markdown";
 import CopyButton from "@/components/CopyButton";
+import ShareButton from "@/components/ShareButton";
 
 /** 비교 상세 — 한 비교의 모든 데이터(프롬프트, provider별 전체 응답·지표·에러)를 펼쳐 본다. */
 export default function ComparisonDetailPage() {
@@ -41,9 +42,12 @@ export default function ComparisonDetailPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <Link href="/history" className="text-sm font-semibold text-brand-600 hover:underline">
-        ← 기록으로
-      </Link>
+      <div className="flex items-center justify-between">
+        <Link href="/history" className="text-sm font-semibold text-brand-600 hover:underline">
+          ← 기록으로
+        </Link>
+        {comparison && <ShareButton path={`/comparison/${comparison.id}`} />}
+      </div>
 
       {error && <p className="text-sm text-red-600">{error}</p>}
       {!comparison && !error && <p className="text-sm text-muted">불러오는 중…</p>}

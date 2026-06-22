@@ -12,6 +12,7 @@ import {
 import { castVote, createComparison, getComparison, getPresets, getProviders, ApiError } from "@/lib/api";
 import { getGuestKey } from "@/lib/auth";
 import ResultCard from "./ResultCard";
+import ShareButton from "./ShareButton";
 
 /** 비교 메인 플로우: 프롬프트 입력 → 3 CLI 실행 → 블라인드 카드 → 차원별 투표 → 정체 공개. */
 export default function CompareView() {
@@ -30,6 +31,7 @@ export default function CompareView() {
   const [votes, setVotes] = useState<Record<string, string>>({}); // dimension → providerId
   const [voting, setVoting] = useState<Dimension | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const resultsRef = useRef<HTMLDivElement>(null);
 
   // 투표를 한 번이라도 했거나, "투표 없이 전체 보기" 토글이 켜지면 정체 공개.
   const hasVoted = Object.keys(votes).length > 0;
@@ -87,6 +89,11 @@ export default function CompareView() {
       setRunning(false);
     }
   }
+
+  // 결과가 처음 생기면 결과 영역으로 부드럽게 스크롤(모바일에서 입력폼 아래로).
+  useEffect(() => {
+    if (result?.id) resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [result?.id]);
 
   // 결과가 pending 이면 1.5s 마다 폴링해 카드를 점진적으로 갱신. done/error 면 중단.
   useEffect(() => {
@@ -170,8 +177,14 @@ export default function CompareView() {
         <textarea
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && !inProgress) {
+              e.preventDefault();
+              run();
+            }
+          }}
           rows={4}
-          placeholder="여기에 프롬프트를 입력하세요. 예) 너는 새침한 고양이 집사야. 오늘 날씨가 좋으니 산책을 권해줘."
+          placeholder="여기에 프롬프트를 입력하세요. 예) 너는 새침한 고양이 집사야. 오늘 날씨가 좋으니 산책을 권해줘.  (⌘/Ctrl+Enter 로 실행)"
           className="w-full resize-y rounded-xl border border-black/10 bg-background p-3 text-sm outline-none focus:border-brand-400 dark:border-white/10"
         />
 
@@ -231,7 +244,7 @@ export default function CompareView() {
 
       {/* 결과 (pending 부터 점진적으로 채워짐) */}
       {result && (
-        <section className="flex flex-col gap-4">
+        <section ref={resultsRef} className="flex flex-col gap-4 scroll-mt-20">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="flex items-center gap-2 text-lg font-black">
               결과 {revealed ? "" : "(블라인드)"}
@@ -242,7 +255,8 @@ export default function CompareView() {
                 </span>
               )}
             </h2>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
+              {revealed && <ShareButton path={`/comparison/${result.id}`} />}
               <a
                 href={`/comparison/${result.id}`}
                 className="text-sm font-semibold text-brand-600 hover:underline"

@@ -54,9 +54,17 @@ class CliRunnerService(
         }
         // 첫 토큰(논리 바이너리) → 실제 실행 경로로 치환. 나머지 인자 유지. 프롬프트는 마지막 argv.
         val realBin = cliProperties.resolveBin(provider.resolveBinKey())
+        // 일부 CLI(codex)는 최종 응답이 stdout 메타데이터에 섞임 → 파일로 받는다.
+        val outputFile: File? = provider.outputFileFlag
+            ?.takeIf { it.isNotBlank() }
+            ?.let { File.createTempFile("clicmp-", ".out") }
         val argv = buildList {
             add(realBin)
             addAll(tokens.drop(1))
+            if (outputFile != null) {
+                add(provider.outputFileFlag!!.trim())
+                add(outputFile.absolutePath)
+            }
             add(prompt)
         }
 
@@ -75,22 +83,28 @@ class CliRunnerService(
         val outF = CompletableFuture.supplyAsync { process.inputStream.bufferedReader().use { it.readText() } }
         val errF = CompletableFuture.supplyAsync { process.errorStream.bufferedReader().use { it.readText() } }
 
-        val finished = process.waitFor(cliProperties.timeoutSeconds, TimeUnit.SECONDS)
-        if (!finished) {
-            process.destroyForcibly()
-            outF.cancel(true); errF.cancel(true)
-            return RunResult("timeout", null, "${cliProperties.timeoutSeconds}s 타임아웃", null, elapsedMs(started))
-        }
-        val exit = process.exitValue()
-        val out = runCatching { outF.get(5, TimeUnit.SECONDS) }.getOrDefault("").trim()
-        val err = runCatching { errF.get(5, TimeUnit.SECONDS) }.getOrDefault("").trim()
-        val latency = elapsedMs(started)
+        try {
+            val finished = process.waitFor(cliProperties.timeoutSeconds, TimeUnit.SECONDS)
+            if (!finished) {
+                process.destroyForcibly()
+                outF.cancel(true); errF.cancel(true)
+                return RunResult("timeout", null, "${cliProperties.timeoutSeconds}s 타임아웃", null, elapsedMs(started))
+            }
+            val exit = process.exitValue()
+            val stdout = runCatching { outF.get(5, TimeUnit.SECONDS) }.getOrDefault("").trim()
+            val err = runCatching { errF.get(5, TimeUnit.SECONDS) }.getOrDefault("").trim()
+            // 출력 파일 모드면 파일 내용을, 아니면 stdout 을 응답으로.
+            val response = outputFile?.let { runCatching { it.readText().trim() }.getOrDefault("") } ?: stdout
+            val latency = elapsedMs(started)
 
-        return if (exit == 0 && out.isNotBlank()) {
-            RunResult("ok", out, err.ifBlank { null }, exit, latency)
-        } else {
-            val msg = err.ifBlank { out.ifBlank { "exit=$exit, 빈 응답" } }
-            RunResult("error", out.ifBlank { null }, msg, exit, latency)
+            return if (exit == 0 && response.isNotBlank()) {
+                RunResult("ok", response, err.ifBlank { null }, exit, latency)
+            } else {
+                val msg = err.ifBlank { stdout.ifBlank { "exit=$exit, 빈 응답" } }
+                RunResult("error", response.ifBlank { null }, msg, exit, latency)
+            }
+        } finally {
+            outputFile?.delete()
         }
     }
 

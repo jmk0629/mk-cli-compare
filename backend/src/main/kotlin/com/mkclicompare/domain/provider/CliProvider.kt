@@ -31,6 +31,10 @@ class CliProvider(
     @Column(name = "bin_key")
     val binKey: String? = null,       // cli.bins 매핑 키. null 이면 command 첫 토큰.
 
+    @Column(name = "output_file_flag")
+    val outputFileFlag: String? = null, // 설정 시 CLI 최종 응답을 stdout 대신 임시파일로 받음
+    //                                      (예: codex 의 "--output-last-message"). 러너가 <flag> <tmp> 를 argv 에 주입.
+
     @Column(name = "model")
     val model: String? = null,
 

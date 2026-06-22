@@ -14,6 +14,7 @@ import {
   castVote,
   comparisonStreamUrl,
   createComparison,
+  generatePrompt,
   getComparison,
   getPresets,
   getProviders,
@@ -31,6 +32,7 @@ export default function CompareView() {
   const [category, setCategory] = useState<string>("general");
   const [selectedModels, setSelectedModels] = useState<Record<string, string>>({}); // providerId → model arg
   const [running, setRunning] = useState(false);
+  const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<Comparison | null>(null);
 
@@ -74,6 +76,19 @@ export default function CompareView() {
   );
 
   const presetsForCategory = presets.filter((p) => p.category === category);
+
+  async function generate() {
+    setGenerating(true);
+    setError(null);
+    try {
+      const g = await generatePrompt(category);
+      setPrompt(g.prompt);
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : "프롬프트 생성에 실패했습니다.");
+    } finally {
+      setGenerating(false);
+    }
+  }
 
   async function run() {
     const text = prompt.trim();
@@ -205,21 +220,27 @@ export default function CompareView() {
           ))}
         </div>
 
-        {/* 프리셋 */}
-        {presetsForCategory.length > 0 && (
-          <div className="mb-3 flex flex-wrap gap-2">
-            {presetsForCategory.map((p) => (
-              <button
-                key={p.id}
-                onClick={() => setPrompt(p.prompt)}
-                title={p.description ?? ""}
-                className="rounded-lg border border-brand-200 px-2.5 py-1 text-xs text-brand-700 hover:bg-brand-50 dark:border-white/10 dark:text-brand-200 dark:hover:bg-white/5"
-              >
-                ＋ {p.title}
-              </button>
-            ))}
-          </div>
-        )}
+        {/* 프리셋 + AI 생성 */}
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <button
+            onClick={generate}
+            disabled={generating}
+            title="선택한 카테고리에 맞는 새 프롬프트를 AI가 생성해 입력창에 넣어줍니다"
+            className="rounded-lg bg-brand-600 px-2.5 py-1 text-xs font-bold text-white transition hover:bg-brand-700 disabled:opacity-50"
+          >
+            {generating ? "✨ 생성 중…" : "✨ AI로 프롬프트 생성"}
+          </button>
+          {presetsForCategory.map((p) => (
+            <button
+              key={p.id}
+              onClick={() => setPrompt(p.prompt)}
+              title={p.description ?? ""}
+              className="rounded-lg border border-brand-200 px-2.5 py-1 text-xs text-brand-700 hover:bg-brand-50 dark:border-white/10 dark:text-brand-200 dark:hover:bg-white/5"
+            >
+              ＋ {p.title}
+            </button>
+          ))}
+        </div>
 
         <textarea
           value={prompt}

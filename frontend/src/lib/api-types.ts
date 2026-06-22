@@ -32,6 +32,13 @@ export const PresetSchema = z.object({
 export type Preset = z.infer<typeof PresetSchema>;
 export const PresetListSchema = z.array(PresetSchema);
 
+export const GeneratedPromptSchema = z.object({
+  prompt: z.string(),
+  providerId: z.string(),
+  category: z.string(),
+});
+export type GeneratedPrompt = z.infer<typeof GeneratedPromptSchema>;
+
 export const RunSchema = z.object({
   providerId: z.string(),
   model: z.string().nullable(),

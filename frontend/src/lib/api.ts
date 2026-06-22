@@ -5,6 +5,8 @@ import {
   ComparisonListSchema,
   ComparisonSchema,
   Dimension,
+  GeneratedPrompt,
+  GeneratedPromptSchema,
   Leaderboard,
   LeaderboardSchema,
   Me,
@@ -67,6 +69,13 @@ export const getProviders = (): Promise<Provider[]> =>
 
 export const getPresets = (): Promise<Preset[]> =>
   request("/api/presets", PresetListSchema);
+
+/** 카테고리 맞춤 프롬프트를 CLI 로 생성(옵트인, 1 호출). */
+export const generatePrompt = (category: string, provider?: string): Promise<GeneratedPrompt> =>
+  request("/api/prompts/generate", GeneratedPromptSchema, {
+    method: "POST",
+    body: JSON.stringify({ category, provider }),
+  });
 
 // ── Comparison ──
 export const createComparison = (

@@ -6,6 +6,8 @@ import Link from "next/link";
 import { getComparison, getProviders } from "@/lib/api";
 import { CATEGORIES, Comparison, Provider, Run } from "@/lib/api-types";
 import { providerEmoji } from "@/lib/providers";
+import Markdown from "@/components/Markdown";
+import CopyButton from "@/components/CopyButton";
 
 /** 비교 상세 — 한 비교의 모든 데이터(프롬프트, provider별 전체 응답·지표·에러)를 펼쳐 본다. */
 export default function ComparisonDetailPage() {
@@ -125,13 +127,20 @@ function DetailCard({ run, provider }: { run: Run; provider?: Provider }) {
           </span>
           {run.model && <span className="text-xs text-muted">{run.model}</span>}
         </span>
-        <span className="text-xs text-muted">
-          {run.latencyMs != null ? `${(run.latencyMs / 1000).toFixed(1)}s` : ""}
-        </span>
+        <div className="flex items-center gap-2">
+          {ok && run.responseText && <CopyButton text={run.responseText} />}
+          <span className="text-xs text-muted">
+            {run.latencyMs != null ? `${(run.latencyMs / 1000).toFixed(1)}s` : ""}
+          </span>
+        </div>
       </div>
-      <pre className="max-h-[28rem] overflow-auto whitespace-pre-wrap break-words rounded-xl bg-black/[0.03] p-3 text-sm leading-relaxed dark:bg-white/[0.04]">
-        {ok ? run.responseText : `⚠️ ${run.status}\n\n${run.errorText ?? "응답 없음"}`}
-      </pre>
+      <div className="max-h-[32rem] overflow-auto rounded-xl bg-black/[0.03] p-3 dark:bg-white/[0.04]">
+        {ok ? (
+          <Markdown content={run.responseText ?? ""} />
+        ) : (
+          <pre className="whitespace-pre-wrap break-words text-sm text-muted">{`⚠️ ${run.status}\n\n${run.errorText ?? "응답 없음"}`}</pre>
+        )}
+      </div>
     </div>
   );
 }

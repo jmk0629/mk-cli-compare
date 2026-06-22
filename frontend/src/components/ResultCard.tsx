@@ -2,6 +2,8 @@
 
 import { Provider, Run } from "@/lib/api-types";
 import { providerEmoji, slotLabel } from "@/lib/providers";
+import Markdown from "./Markdown";
+import CopyButton from "./CopyButton";
 
 interface Props {
   run: Run;
@@ -45,7 +47,7 @@ export default function ResultCard({ run, index, provider, revealed, isWinner, c
             응답 생성 중…
           </span>
         ) : ok ? (
-          run.responseText
+          <Markdown content={run.responseText ?? ""} />
         ) : (
           <span className="text-muted">
             {run.status === "timeout" ? "⏱ 시간 초과" : "⚠️ 응답 실패"}
@@ -56,7 +58,10 @@ export default function ResultCard({ run, index, provider, revealed, isWinner, c
 
       <div className="mt-3 flex items-center justify-between text-xs text-muted">
         <span>{run.latencyMs != null ? `${(run.latencyMs / 1000).toFixed(1)}s` : "—"}</span>
-        <span>{run.charCount != null ? `${run.charCount}자` : ""}</span>
+        <div className="flex items-center gap-2">
+          {ok && run.responseText && <CopyButton text={run.responseText} />}
+          <span>{run.charCount != null ? `${run.charCount}자` : ""}</span>
+        </div>
       </div>
 
       {canVote && (

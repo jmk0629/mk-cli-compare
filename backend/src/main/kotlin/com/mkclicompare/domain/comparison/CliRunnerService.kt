@@ -59,6 +59,8 @@ class CliRunnerService(
         val outputFile: File? = provider.outputFileFlag
             ?.takeIf { it.isNotBlank() }
             ?.let { File.createTempFile("clicmp-", ".out") }
+        // argv 순서 (중요): [bin] + 서브커맨드/정적플래그 + [모델] + [출력파일] + [프롬프트플래그] + [프롬프트]
+        // agy 의 `-p` 는 다음 토큰을 프롬프트 값으로 소비하므로 프롬프트플래그는 반드시 프롬프트 직전에 둔다.
         val argv = buildList {
             add(realBin)
             addAll(tokens.drop(1))
@@ -72,6 +74,8 @@ class CliRunnerService(
                 add(provider.outputFileFlag!!.trim())
                 add(outputFile.absolutePath)
             }
+            val pf = provider.promptFlag
+            if (!pf.isNullOrBlank()) add(pf.trim())
             add(prompt)
         }
 

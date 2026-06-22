@@ -35,6 +35,9 @@ class CliProvider(
     val outputFileFlag: String? = null, // 설정 시 CLI 최종 응답을 stdout 대신 임시파일로 받음
     //                                      (예: codex 의 "--output-last-message"). 러너가 <flag> <tmp> 를 argv 에 주입.
 
+    @Column(name = "prompt_flag")
+    val promptFlag: String? = null,   // 프롬프트 직전에 둘 플래그(claude/agy: -p). null 이면 프롬프트는 positional.
+
     @Column(name = "model")
     val model: String? = null,
 

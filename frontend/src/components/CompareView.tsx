@@ -277,6 +277,29 @@ export default function CompareView() {
         {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
       </section>
 
+      {/* 온보딩 — 아직 비교 전이면 사용법 3단계 안내 */}
+      {!result && !running && (
+        <section className="grid gap-3 sm:grid-cols-3">
+          {[
+            { n: "1", t: "프롬프트 입력", d: "비교할 질문/지시를 적고 provider별 모델을 골라요. ⌘/Ctrl+Enter 로 바로 실행.", icon: "✍️" },
+            { n: "2", t: "3 CLI 동시 실행", d: "claude · gemini(agy) · codex 가 같은 프롬프트로 동시에 답하고 실시간으로 채워져요.", icon: "⚡" },
+            { n: "3", t: "블라인드 투표", d: "정체를 가린 채 더 나은 응답에 투표 → 승률 리더보드로 우열을 가려요.", icon: "🏆" },
+          ].map((s) => (
+            <div key={s.n} className="rounded-2xl border border-black/10 bg-card p-4 dark:border-white/10">
+              <div className="mb-1 flex items-center gap-2">
+                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-600 text-sm font-black text-white">
+                  {s.n}
+                </span>
+                <span className="font-bold">
+                  {s.icon} {s.t}
+                </span>
+              </div>
+              <p className="text-sm text-muted">{s.d}</p>
+            </div>
+          ))}
+        </section>
+      )}
+
       {/* 최초 생성 대기(매우 짧음) 스켈레톤 */}
       {running && !result && (
         <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

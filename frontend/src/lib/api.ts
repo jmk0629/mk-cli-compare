@@ -100,8 +100,13 @@ export const castVote = (
   });
 
 // ── Leaderboard ──
-export const getLeaderboard = (): Promise<Leaderboard> =>
-  request("/api/leaderboard", LeaderboardSchema);
+export const getLeaderboard = (category?: string, dimension?: string): Promise<Leaderboard> => {
+  const qs = new URLSearchParams();
+  if (category) qs.set("category", category);
+  if (dimension) qs.set("dimension", dimension);
+  const q = qs.toString();
+  return request(`/api/leaderboard${q ? `?${q}` : ""}`, LeaderboardSchema);
+};
 
 // ── Auth ──
 export const getAuthProviders = (): Promise<AuthProviders> =>

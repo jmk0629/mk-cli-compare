@@ -58,18 +58,19 @@ class VoteService(
         val avgLatencyMs: Long?,
     )
 
+    /** category/dimension 필터(null=전체)로 리더보드 집계. */
     @Transactional(readOnly = true)
-    fun leaderboard(): List<ProviderRanking> {
+    fun leaderboard(category: String? = null, dimension: String? = null): List<ProviderRanking> {
         // 투표 집계: providerId → (dimension → count)
         val winsByProvider = mutableMapOf<String, MutableMap<String, Long>>()
-        voteRepository.aggregateWins().forEach { row ->
+        voteRepository.aggregateWinsFiltered(category, dimension).forEach { row ->
             val pid = row[0] as String
             val dim = row[1] as String
             val cnt = (row[2] as Number).toLong()
             winsByProvider.getOrPut(pid) { mutableMapOf() }[dim] = cnt
         }
-        // 실행 통계: providerId → (total, ok, avgLatency)
-        val runStats = runRepository.aggregateRunStats().associate { row ->
+        // 실행 통계: providerId → (total, ok, avgLatency). 실행 통계는 카테고리만 의미 있음(차원 무관).
+        val runStats = runRepository.aggregateRunStatsFiltered(category).associate { row ->
             val pid = row[0] as String
             val total = (row[1] as Number).toLong()
             val ok = (row[2] as Number?)?.toLong() ?: 0L

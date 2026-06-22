@@ -2,26 +2,55 @@
 
 import { useEffect, useState } from "react";
 import { getLeaderboard } from "@/lib/api";
-import { Ranking, DIMENSIONS } from "@/lib/api-types";
+import { Ranking, DIMENSIONS, CATEGORIES } from "@/lib/api-types";
 import { providerEmoji } from "@/lib/providers";
 
 export default function LeaderboardPage() {
   const [rankings, setRankings] = useState<Ranking[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [category, setCategory] = useState<string>(""); // "" = 전체
+  const [dimension, setDimension] = useState<string>(""); // "" = 전체
 
   useEffect(() => {
-    getLeaderboard()
+    setRankings(null);
+    getLeaderboard(category || undefined, dimension || undefined)
       .then((l) => setRankings(l.rankings))
       .catch(() => setError("리더보드를 불러오지 못했습니다. 백엔드가 켜져 있나요?"));
-  }, []);
+  }, [category, dimension]);
 
   const maxWins = Math.max(1, ...(rankings ?? []).map((r) => r.totalWins));
+  const chip = (active: boolean) =>
+    `min-h-9 rounded-full px-3 py-1 text-xs font-semibold transition ${
+      active ? "bg-brand-600 text-white" : "bg-brand-100 text-brand-700 hover:bg-brand-200 dark:bg-white/10 dark:text-brand-200"
+    }`;
 
   return (
     <div className="flex flex-col gap-5">
       <div>
         <h1 className="text-xl font-black">리더보드</h1>
         <p className="text-sm text-muted">누적 블라인드 투표 기준 승수 · 평균 속도 · 응답 성공률.</p>
+      </div>
+
+      {/* 필터: 카테고리 / 차원 */}
+      <div className="flex flex-col gap-2 rounded-2xl border border-black/10 bg-card p-3 dark:border-white/10">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="mr-1 text-xs font-bold text-muted">카테고리</span>
+          <button onClick={() => setCategory("")} className={chip(category === "")}>전체</button>
+          {CATEGORIES.map((c) => (
+            <button key={c.key} onClick={() => setCategory(c.key)} className={chip(category === c.key)}>
+              {c.emoji} {c.label}
+            </button>
+          ))}
+        </div>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="mr-1 text-xs font-bold text-muted">차원</span>
+          <button onClick={() => setDimension("")} className={chip(dimension === "")}>전체</button>
+          {DIMENSIONS.map((d) => (
+            <button key={d.key} onClick={() => setDimension(d.key)} className={chip(dimension === d.key)}>
+              {d.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {error && <p className="text-sm text-red-600">{error}</p>}

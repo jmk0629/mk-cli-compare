@@ -11,6 +11,7 @@ interface ComparisonRepository : JpaRepository<Comparison, Long> {
 
 interface ComparisonRunRepository : JpaRepository<ComparisonRun, Long> {
     fun findByComparisonId(comparisonId: Long): List<ComparisonRun>
+    fun findByComparisonIdAndProviderId(comparisonId: Long, providerId: String): ComparisonRun?
     fun findByComparisonIdIn(comparisonIds: List<Long>): List<ComparisonRun>
 
     /** provider 별 실행 통계: [providerId, totalRuns, okRuns, avgLatencyMs]. */

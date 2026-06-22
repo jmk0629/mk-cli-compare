@@ -20,13 +20,13 @@ import org.springframework.web.bind.annotation.RestController
 class ComparisonController(
     private val comparisonService: ComparisonService,
 ) {
-    /** 같은 프롬프트를 활성 provider 전체에 실행하고 결과를 반환. (동기 — 완료까지 대기) */
+    /** 비교 생성 — pending 상태로 즉시 반환(백그라운드 실행). 진행은 GET 폴링으로 추적. */
     @PostMapping("/api/comparisons")
     fun create(
         @AuthenticationPrincipal principal: AuthenticatedUser?,
         @RequestBody @Valid request: CreateComparisonReq,
     ): ComparisonRes = ComparisonRes.of(
-        comparisonService.createAndRun(
+        comparisonService.createAsync(
             prompt = request.prompt,
             category = request.category,
             userId = principal?.userId,

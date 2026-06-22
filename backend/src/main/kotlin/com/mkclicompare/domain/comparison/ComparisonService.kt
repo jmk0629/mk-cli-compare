@@ -1,38 +1,36 @@
 package com.mkclicompare.domain.comparison
 
-import com.mkclicompare.config.CliProperties
-import com.mkclicompare.domain.provider.CliProvider
 import com.mkclicompare.domain.provider.ProviderService
 import com.mkclicompare.web.error.UnauthorizedException
-import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.Executors
 
 /**
- * 비교 오케스트레이션:
- *  1) comparison 행 생성(pending)
- *  2) 활성 provider 별 CLI 실행 (병렬/순차) — **트랜잭션 밖**(수초~분 소요)
- *  3) run 행 저장 + comparison 상태 갱신
+ * 비교 오케스트레이션(생성/조회).
+ *  1) comparison(pending) + provider별 pending run 즉시 저장
+ *  2) ComparisonExecutor 로 백그라운드 실행 트리거(비블로킹)
+ *  3) 프론트는 폴링으로 진행 추적
  *
- * CLI 실행을 DB 트랜잭션으로 감싸지 않는다(커넥션 점유·SQLite writer 1개 제약).
+ * 실제 CLI 실행/갱신은 ComparisonExecutor 가 트랜잭션 밖 백그라운드에서 수행.
  */
 @Service
 class ComparisonService(
     private val providerService: ProviderService,
     private val comparisonRepository: ComparisonRepository,
     private val runRepository: ComparisonRunRepository,
-    private val cliRunner: CliRunnerService,
-    private val cliProperties: CliProperties,
+    private val executor: ComparisonExecutor,
 ) {
-    private val log = LoggerFactory.getLogger(javaClass)
 
     data class ComparisonResult(val comparison: Comparison, val runs: List<ComparisonRun>)
 
-    /** 비교 실행. 게스트면 userId=null + guestKey. models: providerId → 선택 모델(model_arg). */
-    fun createAndRun(
+    /**
+     * 비교 생성 — comparison(pending) + provider별 pending run 을 즉시 저장하고 **백그라운드 실행을 트리거**한 뒤
+     * 곧바로 반환한다(HTTP 비블로킹). 프론트는 `GET /api/comparisons/{id}` 폴링으로 진행을 추적.
+     * 게스트면 userId=null + guestKey. models: providerId → 선택 모델(model_arg).
+     */
+    @Transactional
+    fun createAsync(
         prompt: String,
         category: String,
         userId: Long?,
@@ -54,73 +52,35 @@ class ComparisonService(
             p.id to valid
         }
 
-        val comparison = saveComparison(
+        val now = Instant.now().toString()
+        val comparison = comparisonRepository.save(
             Comparison(
                 userId = userId,
                 guestKey = guestKey,
                 category = category.ifBlank { "general" },
                 prompt = cleaned,
                 status = "pending",
-                createdAt = Instant.now().toString(),
+                createdAt = now,
             ),
         )
         val comparisonId = requireNotNull(comparison.id)
 
-        val results = execute(providers, cleaned, resolvedModels)
-
-        val now = Instant.now().toString()
+        // provider별 pending run 을 미리 만들어 프론트가 즉시 3개 카드를 그릴 수 있게 한다.
         val runs = providers.map { provider ->
-            val r = results[provider.id]
             runRepository.save(
                 ComparisonRun(
                     comparisonId = comparisonId,
                     providerId = provider.id,
                     model = resolvedModels[provider.id],
-                    status = r?.status ?: "error",
-                    responseText = r?.responseText,
-                    errorText = r?.errorText ?: (if (r == null) "실행 결과 없음" else null),
-                    exitCode = r?.exitCode,
-                    latencyMs = r?.latencyMs,
-                    charCount = r?.responseText?.length,
+                    status = "pending",
                     createdAt = now,
                 ),
             )
         }
-        val anyOk = runs.any { it.status == "ok" }
-        comparison.status = if (anyOk) "done" else "error"
-        comparison.completedAt = now
-        saveComparison(comparison)
 
+        executor.execute(comparisonId) // @Async — 트랜잭션 커밋 후 별도 스레드에서 실행
         return ComparisonResult(comparison, runs)
     }
-
-    /** provider 별 실행 — parallel 설정에 따라 병렬/순차. 각 run 은 자체 타임아웃 보유. */
-    private fun execute(
-        providers: List<CliProvider>,
-        prompt: String,
-        models: Map<String, String?>,
-    ): Map<String, CliRunnerService.RunResult> {
-        if (providers.size <= 1 || !cliProperties.parallel) {
-            return providers.associate { p -> p.id to cliRunner.run(p, prompt, models[p.id]) }
-        }
-        val pool = Executors.newFixedThreadPool(providers.size)
-        return try {
-            val futures = providers.associate { p ->
-                p.id to CompletableFuture.supplyAsync({ cliRunner.run(p, prompt, models[p.id]) }, pool)
-            }
-            futures.mapValues { (id, f) ->
-                runCatching { f.get() }.getOrElse {
-                    log.warn("provider {} future 실패: {}", id, it.message)
-                    CliRunnerService.RunResult("error", null, it.message, null, 0)
-                }
-            }
-        } finally {
-            pool.shutdown()
-        }
-    }
-
-    @Transactional
-    fun saveComparison(c: Comparison): Comparison = comparisonRepository.save(c)
 
     @Transactional(readOnly = true)
     fun get(id: Long): ComparisonResult {

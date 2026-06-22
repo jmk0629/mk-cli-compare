@@ -39,7 +39,12 @@ export default function ResultCard({ run, index, provider, revealed, isWinner, c
       </div>
 
       <div className="min-h-24 flex-1 whitespace-pre-wrap break-words rounded-xl bg-black/[0.03] p-3 text-sm leading-relaxed dark:bg-white/[0.04]">
-        {ok ? (
+        {run.status === "pending" ? (
+          <span className="flex items-center gap-2 text-muted">
+            <span className="h-4 w-4 animate-spin rounded-full border-2 border-brand-300 border-t-brand-600" />
+            응답 생성 중…
+          </span>
+        ) : ok ? (
           run.responseText
         ) : (
           <span className="text-muted">

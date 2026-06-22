@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   CATEGORIES,
   Comparison,
@@ -8,9 +8,8 @@ import {
   Dimension,
   Preset,
   Provider,
-  Run,
 } from "@/lib/api-types";
-import { castVote, createComparison, getPresets, getProviders, ApiError } from "@/lib/api";
+import { castVote, createComparison, getComparison, getPresets, getProviders, ApiError } from "@/lib/api";
 import { getGuestKey } from "@/lib/auth";
 import ResultCard from "./ResultCard";
 
@@ -25,15 +24,22 @@ export default function CompareView() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<Comparison | null>(null);
 
-  // 블라인드: 결과 받으면 카드 순서를 한 번 섞는다(위치 편향 방지).
-  const [order, setOrder] = useState<Run[]>([]);
+  // 블라인드: 결과 받으면 카드 순서(providerId 시퀀스)를 한 번 섞는다(위치 편향 방지). 폴링해도 순서 고정.
+  const [orderIds, setOrderIds] = useState<string[]>([]);
   const [showAll, setShowAll] = useState(false); // 투표 없이 전체 보기 토글
   const [votes, setVotes] = useState<Record<string, string>>({}); // dimension → providerId
   const [voting, setVoting] = useState<Dimension | null>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // 투표를 한 번이라도 했거나, "투표 없이 전체 보기" 토글이 켜지면 정체 공개.
   const hasVoted = Object.keys(votes).length > 0;
   const revealed = showAll || hasVoted;
+
+  // orderIds(고정 순서) → 최신 run 데이터로 매핑. 폴링으로 run 이 pending→ok 되어도 위치 유지.
+  const orderedRuns = orderIds
+    .map((id) => result?.runs.find((r) => r.providerId === id))
+    .filter((r): r is NonNullable<typeof r> => r != null);
+  const inProgress = running || result?.status === "pending";
 
   useEffect(() => {
     getProviders()
@@ -69,16 +75,39 @@ export default function CompareView() {
     setResult(null);
     setShowAll(false);
     setVotes({});
+    if (pollRef.current) clearInterval(pollRef.current);
     try {
+      // 비교 생성 → pending run 3개 즉시 반환. 카드를 바로 그리고, 폴링으로 점진적으로 채운다.
       const c = await createComparison(text, category, getGuestKey(), selectedModels);
       setResult(c);
-      setOrder(shuffle(c.runs));
+      setOrderIds(shuffle(c.runs.map((r) => r.providerId)));
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "비교 실행에 실패했습니다. 백엔드가 켜져 있는지 확인하세요.");
     } finally {
       setRunning(false);
     }
   }
+
+  // 결과가 pending 이면 1.5s 마다 폴링해 카드를 점진적으로 갱신. done/error 면 중단.
+  useEffect(() => {
+    if (!result || result.status !== "pending") return;
+    const id = result.id;
+    pollRef.current = setInterval(async () => {
+      try {
+        const fresh = await getComparison(id);
+        setResult(fresh);
+        if (fresh.status !== "pending" && pollRef.current) {
+          clearInterval(pollRef.current);
+          pollRef.current = null;
+        }
+      } catch {
+        /* 일시 실패는 다음 폴링에서 재시도 */
+      }
+    }, 1500);
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, [result?.id, result?.status]);
 
   async function vote(dimension: Dimension, providerId: string) {
     if (!result) return;
@@ -178,18 +207,18 @@ export default function CompareView() {
           </span>
           <button
             onClick={run}
-            disabled={running}
+            disabled={inProgress}
             className="min-h-11 rounded-xl bg-brand-600 px-5 py-2.5 font-bold text-white transition hover:bg-brand-700 active:scale-[0.98] disabled:opacity-50"
           >
-            {running ? "실행 중… (수 초 소요)" : "⚡ 비교 실행"}
+            {inProgress ? "실행 중…" : "⚡ 비교 실행"}
           </button>
         </div>
 
         {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
       </section>
 
-      {/* 실행 중 스켈레톤 */}
-      {running && (
+      {/* 최초 생성 대기(매우 짧음) 스켈레톤 */}
+      {running && !result && (
         <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {(providers.length ? providers : [0, 1, 2]).map((_, i) => (
             <div
@@ -200,11 +229,19 @@ export default function CompareView() {
         </section>
       )}
 
-      {/* 결과 */}
-      {result && !running && (
+      {/* 결과 (pending 부터 점진적으로 채워짐) */}
+      {result && (
         <section className="flex flex-col gap-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-lg font-black">결과 {revealed ? "" : "(블라인드)"}</h2>
+            <h2 className="flex items-center gap-2 text-lg font-black">
+              결과 {revealed ? "" : "(블라인드)"}
+              {inProgress && (
+                <span className="inline-flex items-center gap-1 text-xs font-semibold text-brand-600">
+                  <span className="h-3 w-3 animate-spin rounded-full border-2 border-brand-300 border-t-brand-600" />
+                  실행 중
+                </span>
+              )}
+            </h2>
             <div className="flex items-center gap-3">
               <a
                 href={`/comparison/${result.id}`}
@@ -243,7 +280,7 @@ export default function CompareView() {
           )}
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {order.map((run, i) => (
+            {orderedRuns.map((run, i) => (
               <ResultCard
                 key={run.providerId}
                 run={run}
@@ -264,7 +301,7 @@ export default function CompareView() {
               {DIMENSIONS.map((d) => (
                 <div key={d.key} className="flex flex-wrap items-center gap-2">
                   <span className="w-16 shrink-0 text-sm font-semibold">{d.label}</span>
-                  {order
+                  {orderedRuns
                     .filter((r) => r.status === "ok")
                     .map((r, i) => {
                       const chosen = votes[d.key] === r.providerId;

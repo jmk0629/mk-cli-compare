@@ -104,6 +104,22 @@ export const StatsSchema = z.object({
 });
 export type Stats = z.infer<typeof StatsSchema>;
 
+export const JudgeScoreSchema = z.object({
+  providerId: z.string(),
+  score: z.number(),
+  reason: z.string(),
+});
+export const JudgeVerdictSchema = z.object({
+  id: z.number(),
+  judgeProviderId: z.string(),
+  winnerProviderId: z.string().nullable(),
+  summary: z.string().nullable(),
+  scores: z.array(JudgeScoreSchema),
+  status: z.string(),
+  createdAt: z.string(),
+});
+export type JudgeVerdict = z.infer<typeof JudgeVerdictSchema>;
+
 export const MeSchema = z.object({
   id: z.number(),
   provider: z.string(),

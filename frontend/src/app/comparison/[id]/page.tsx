@@ -9,6 +9,7 @@ import { providerEmoji } from "@/lib/providers";
 import Markdown from "@/components/Markdown";
 import CopyButton from "@/components/CopyButton";
 import ShareButton from "@/components/ShareButton";
+import JudgePanel from "@/components/JudgePanel";
 
 /** 비교 상세 — 한 비교의 모든 데이터(프롬프트, provider별 전체 응답·지표·에러)를 펼쳐 본다. */
 export default function ComparisonDetailPage() {
@@ -106,6 +107,11 @@ export default function ComparisonDetailPage() {
               </tbody>
             </table>
           </section>
+
+          {/* AI 자동 심판 */}
+          {comparison.runs.filter((r) => r.status === "ok").length >= 2 && (
+            <JudgePanel comparisonId={comparison.id} providers={providers} />
+          )}
 
           {/* provider별 전체 응답 */}
           <section className="grid gap-4 lg:grid-cols-3">

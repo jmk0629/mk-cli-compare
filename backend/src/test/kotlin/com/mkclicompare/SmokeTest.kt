@@ -37,7 +37,7 @@ class SmokeTest {
     fun `presets are public and seeded`() {
         mockMvc.get("/api/presets").andExpect {
             status { isOk() }
-            jsonPath("$.length()") { value(7) }
+            jsonPath("$.length()") { value(23) } // V1(7) + V5(16)
         }
     }
 

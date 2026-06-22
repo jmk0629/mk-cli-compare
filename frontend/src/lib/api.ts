@@ -7,6 +7,8 @@ import {
   Dimension,
   GeneratedPrompt,
   GeneratedPromptSchema,
+  JudgeVerdict,
+  JudgeVerdictSchema,
   Leaderboard,
   LeaderboardSchema,
   Me,
@@ -113,6 +115,19 @@ export const castVote = (
     method: "POST",
     body: JSON.stringify({ comparisonId, winnerProviderId, dimension, guestKey }),
   });
+
+// ── AI 심판 ──
+export const judgeComparison = (id: number, provider?: string): Promise<JudgeVerdict> =>
+  request(`/api/comparisons/${id}/judge`, JudgeVerdictSchema, {
+    method: "POST",
+    body: JSON.stringify({ provider }),
+  });
+
+/** 최근 평결(없으면 null — 204). */
+export const getJudgeVerdict = async (id: number): Promise<JudgeVerdict | null> =>
+  (await request<JudgeVerdict | undefined>(`/api/comparisons/${id}/judge`, {
+    parse: (v) => (v == null ? undefined : JudgeVerdictSchema.parse(v)),
+  })) ?? null;
 
 // ── Leaderboard ──
 export const getLeaderboard = (category?: string, dimension?: string): Promise<Leaderboard> => {

@@ -26,9 +26,13 @@ export default function CompareView() {
 
   // 블라인드: 결과 받으면 카드 순서를 한 번 섞는다(위치 편향 방지).
   const [order, setOrder] = useState<Run[]>([]);
-  const [revealed, setRevealed] = useState(false);
+  const [showAll, setShowAll] = useState(false); // 투표 없이 전체 보기 토글
   const [votes, setVotes] = useState<Record<string, string>>({}); // dimension → providerId
   const [voting, setVoting] = useState<Dimension | null>(null);
+
+  // 투표를 한 번이라도 했거나, "투표 없이 전체 보기" 토글이 켜지면 정체 공개.
+  const hasVoted = Object.keys(votes).length > 0;
+  const revealed = showAll || hasVoted;
 
   useEffect(() => {
     getProviders().then(setProviders).catch(() => {});
@@ -51,7 +55,7 @@ export default function CompareView() {
     setRunning(true);
     setError(null);
     setResult(null);
-    setRevealed(false);
+    setShowAll(false);
     setVotes({});
     try {
       const c = await createComparison(text, category, getGuestKey());
@@ -70,7 +74,7 @@ export default function CompareView() {
     try {
       await castVote(result.id, providerId, dimension, getGuestKey());
       setVotes((v) => ({ ...v, [dimension]: providerId }));
-      setRevealed(true); // 투표하면 정체 공개
+      // 투표하면 자동으로 정체 공개(revealed 가 hasVoted 로 파생됨).
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "투표에 실패했습니다.");
     } finally {
@@ -161,17 +165,44 @@ export default function CompareView() {
       {/* 결과 */}
       {result && !running && (
         <section className="flex flex-col gap-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-lg font-black">결과 {revealed ? "" : "(블라인드)"}</h2>
-            {!revealed && (
-              <button
-                onClick={() => setRevealed(true)}
-                className="rounded-full bg-brand-100 px-3 py-1.5 text-sm font-semibold text-brand-700 hover:bg-brand-200 dark:bg-white/10 dark:text-brand-200"
+            <div className="flex items-center gap-3">
+              <a
+                href={`/comparison/${result.id}`}
+                className="text-sm font-semibold text-brand-600 hover:underline"
               >
-                정체 공개
-              </button>
-            )}
+                전체 데이터 보기 →
+              </a>
+              {/* 투표 없이 전체(정체+응답) 확인용 토글. 투표를 했으면 항상 공개라 비활성. */}
+              <label
+                className={`flex items-center gap-2 text-sm font-semibold ${hasVoted ? "opacity-50" : "cursor-pointer"}`}
+              >
+                <span>투표 없이 전체 보기</span>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={revealed}
+                  disabled={hasVoted}
+                  onClick={() => setShowAll((v) => !v)}
+                  className={`relative h-6 w-11 rounded-full transition ${
+                    revealed ? "bg-brand-600" : "bg-black/20 dark:bg-white/20"
+                  }`}
+                >
+                  <span
+                    className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition ${
+                      revealed ? "translate-x-5" : ""
+                    }`}
+                  />
+                </button>
+              </label>
+            </div>
           </div>
+          {!hasVoted && (
+            <p className="-mt-2 text-xs text-muted">
+              투표는 선택이에요. 토글을 켜면 투표 없이 어떤 CLI 응답인지·전체 내용을 바로 볼 수 있어요.
+            </p>
+          )}
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {order.map((run, i) => (

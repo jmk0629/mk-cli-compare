@@ -34,7 +34,11 @@ export default function HistoryPage() {
 
       <div className="flex flex-col gap-3">
         {items?.map((c) => (
-          <div key={c.id} className="rounded-2xl border border-black/10 bg-card p-4 dark:border-white/10">
+          <Link
+            key={c.id}
+            href={`/comparison/${c.id}`}
+            className="block rounded-2xl border border-black/10 bg-card p-4 transition hover:border-brand-400 hover:shadow-md dark:border-white/10"
+          >
             <div className="flex items-center justify-between gap-2">
               <span className="rounded-full bg-brand-100 px-2 py-0.5 text-xs font-semibold text-brand-700 dark:bg-white/10 dark:text-brand-200">
                 {c.category}
@@ -54,7 +58,7 @@ export default function HistoryPage() {
                 </span>
               ))}
             </div>
-          </div>
+          </Link>
         ))}
       </div>
 

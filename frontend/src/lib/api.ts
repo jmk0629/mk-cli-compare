@@ -13,6 +13,8 @@ import {
   PresetListSchema,
   Provider,
   ProviderListSchema,
+  Stats,
+  StatsSchema,
   Vote,
   VoteSchema,
 } from "./api-types";
@@ -107,6 +109,9 @@ export const getLeaderboard = (category?: string, dimension?: string): Promise<L
   const q = qs.toString();
   return request(`/api/leaderboard${q ? `?${q}` : ""}`, LeaderboardSchema);
 };
+
+// ── Stats ──
+export const getStats = (): Promise<Stats> => request("/api/stats", StatsSchema);
 
 // ── Auth ──
 export const getAuthProviders = (): Promise<AuthProviders> =>

@@ -83,6 +83,20 @@ export const LeaderboardSchema = z.object({
 });
 export type Leaderboard = z.infer<typeof LeaderboardSchema>;
 
+export const ProviderBriefSchema = z.object({
+  id: z.string(),
+  displayName: z.string(),
+  color: z.string(),
+  value: z.number(),
+});
+export const StatsSchema = z.object({
+  totalComparisons: z.number(),
+  totalVotes: z.number(),
+  topProvider: ProviderBriefSchema.nullable(),
+  fastestProvider: ProviderBriefSchema.nullable(),
+});
+export type Stats = z.infer<typeof StatsSchema>;
+
 export const MeSchema = z.object({
   id: z.number(),
   provider: z.string(),

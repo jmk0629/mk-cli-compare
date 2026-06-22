@@ -1,15 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getLeaderboard } from "@/lib/api";
-import { Ranking, DIMENSIONS, CATEGORIES } from "@/lib/api-types";
+import { getLeaderboard, getStats } from "@/lib/api";
+import { Ranking, DIMENSIONS, CATEGORIES, Stats } from "@/lib/api-types";
 import { providerEmoji } from "@/lib/providers";
 
 export default function LeaderboardPage() {
   const [rankings, setRankings] = useState<Ranking[] | null>(null);
+  const [stats, setStats] = useState<Stats | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [category, setCategory] = useState<string>(""); // "" = 전체
   const [dimension, setDimension] = useState<string>(""); // "" = 전체
+
+  useEffect(() => {
+    getStats().then(setStats).catch(() => {});
+  }, []);
 
   useEffect(() => {
     setRankings(null);
@@ -17,6 +22,15 @@ export default function LeaderboardPage() {
       .then((l) => setRankings(l.rankings))
       .catch(() => setError("리더보드를 불러오지 못했습니다. 백엔드가 켜져 있나요?"));
   }, [category, dimension]);
+
+  const StatCard = ({ label, value, color }: { label: string; value: string; color?: string }) => (
+    <div className="rounded-2xl border border-black/10 bg-card p-3 dark:border-white/10">
+      <div className="text-xs text-muted">{label}</div>
+      <div className="mt-1 text-lg font-black" style={color ? { color } : undefined}>
+        {value}
+      </div>
+    </div>
+  );
 
   const maxWins = Math.max(1, ...(rankings ?? []).map((r) => r.totalWins));
   const chip = (active: boolean) =>
@@ -30,6 +44,24 @@ export default function LeaderboardPage() {
         <h1 className="text-xl font-black">리더보드</h1>
         <p className="text-sm text-muted">누적 블라인드 투표 기준 승수 · 평균 속도 · 응답 성공률.</p>
       </div>
+
+      {/* 통계 개요 */}
+      {stats && (
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <StatCard label="총 비교" value={`${stats.totalComparisons}`} />
+          <StatCard label="총 투표" value={`${stats.totalVotes}`} />
+          <StatCard
+            label="🏆 최다승"
+            value={stats.topProvider ? `${providerEmoji(stats.topProvider.id)} ${stats.topProvider.value}승` : "—"}
+            color={stats.topProvider?.color}
+          />
+          <StatCard
+            label="⚡ 최속(평균)"
+            value={stats.fastestProvider ? `${providerEmoji(stats.fastestProvider.id)} ${(stats.fastestProvider.value / 1000).toFixed(1)}s` : "—"}
+            color={stats.fastestProvider?.color}
+          />
+        </div>
+      )}
 
       {/* 필터: 카테고리 / 차원 */}
       <div className="flex flex-col gap-2 rounded-2xl border border-black/10 bg-card p-3 dark:border-white/10">

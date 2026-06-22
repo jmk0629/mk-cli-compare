@@ -1,0 +1,11 @@
+# 운영 프로파일 — SQLite 를 영구 볼륨(/data)에 저장.
+spring:
+  datasource:
+    url: jdbc:sqlite:/data/mk-cli-compare.db?journal_mode=WAL&busy_timeout=30000&foreign_keys=on
+    driver-class-name: org.sqlite.JDBC
+    username: ""
+    password: ""
+    hikari:
+      maximum-pool-size: 1   # SQLite 동시 writer 1개
+  jpa:
+    database-platform: org.hibernate.community.dialect.SQLiteDialect

@@ -1,0 +1,10 @@
+spring:
+  datasource:
+    url: jdbc:sqlite:./build/test-smoke.db?journal_mode=WAL&busy_timeout=30000&foreign_keys=on
+    driver-class-name: org.sqlite.JDBC
+    username: ""
+    password: ""
+    hikari:
+      maximum-pool-size: 1
+  jpa:
+    database-platform: org.hibernate.community.dialect.SQLiteDialect

@@ -1,0 +1,15 @@
+spring:
+  datasource:
+    # WAL: reader/writer 동시성. busy_timeout: lock 대기. foreign_keys: cascade 활성.
+    url: jdbc:sqlite:./data/mk-cli-compare.db?journal_mode=WAL&busy_timeout=30000&foreign_keys=on
+    driver-class-name: org.sqlite.JDBC
+    username: ""
+    password: ""
+    hikari:
+      maximum-pool-size: 1   # SQLite 동시 writer 1개 제한
+  jpa:
+    database-platform: org.hibernate.community.dialect.SQLiteDialect
+
+logging:
+  level:
+    org.hibernate.SQL: DEBUG

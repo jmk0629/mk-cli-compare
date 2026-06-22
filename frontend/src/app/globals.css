@@ -1,0 +1,71 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+:root {
+  --background: #f5f5fb;   /* cool indigo-50 배경 */
+  --foreground: #1a1726;
+  --card: #ffffff;
+  --muted: #6b6880;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-muted: var(--muted);
+  --font-sans: var(--font-sans), system-ui, sans-serif;
+
+  /* CLI 비교 — 인디고/바이올렛 브랜드 (#6366f1 = brand-500) */
+  --color-brand-50: #eef2ff;
+  --color-brand-100: #e0e7ff;
+  --color-brand-200: #c7d2fe;
+  --color-brand-300: #a5b4fc;
+  --color-brand-400: #818cf8;
+  --color-brand-500: #6366f1;
+  --color-brand-600: #4f46e5;
+  --color-brand-700: #4338ca;
+  --color-brand-800: #3730a3;
+  --color-brand-900: #312e81;
+
+  /* provider 고정 색 (vendor 아이덴티티) */
+  --color-claude: #d97757;
+  --color-gemini: #4285f4;
+  --color-codex: #10a37f;
+}
+
+[data-theme="dark"] {
+  --background: #131120;
+  --foreground: #ece9f5;
+  --card: #1e1b2e;
+  --muted: #9590ab;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 3px solid var(--color-brand-500);
+  outline-offset: 2px;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}

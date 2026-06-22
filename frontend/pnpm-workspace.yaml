@@ -1,0 +1,7 @@
+# 빌드 스크립트 실행 허용 여부(이 프로젝트는 sharp/unrs-resolver 네이티브 빌드 불필요).
+allowBuilds:
+  sharp: false
+  unrs-resolver: false
+# next 가 전이로 끌어오는 postcss 8.4.31 (GHSA-qx2v-qp2m-jg93, XSS) 을 패치된 8.x 로 올린다.
+overrides:
+  postcss: "^8.5.10"

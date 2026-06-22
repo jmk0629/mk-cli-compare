@@ -10,3 +10,8 @@ interface CliProviderRepository : JpaRepository<CliProvider, String> {
 interface PromptPresetRepository : JpaRepository<PromptPreset, String> {
     fun findAllByOrderBySortOrderAsc(): List<PromptPreset>
 }
+
+interface ProviderModelRepository : JpaRepository<ProviderModel, String> {
+    fun findAllByOrderBySortOrderAsc(): List<ProviderModel>
+    fun findByProviderIdOrderBySortOrderAsc(providerId: String): List<ProviderModel>
+}

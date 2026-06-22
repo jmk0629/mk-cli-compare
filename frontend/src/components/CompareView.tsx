@@ -20,6 +20,7 @@ export default function CompareView() {
   const [presets, setPresets] = useState<Preset[]>([]);
   const [prompt, setPrompt] = useState("");
   const [category, setCategory] = useState<string>("general");
+  const [selectedModels, setSelectedModels] = useState<Record<string, string>>({}); // providerId → model arg
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<Comparison | null>(null);
@@ -35,7 +36,18 @@ export default function CompareView() {
   const revealed = showAll || hasVoted;
 
   useEffect(() => {
-    getProviders().then(setProviders).catch(() => {});
+    getProviders()
+      .then((ps) => {
+        setProviders(ps);
+        // provider 별 기본 모델 선택값 초기화(is_default, 없으면 첫 모델).
+        const defaults: Record<string, string> = {};
+        ps.forEach((p) => {
+          const def = p.models.find((m) => m.isDefault) ?? p.models[0];
+          if (def) defaults[p.id] = def.arg;
+        });
+        setSelectedModels(defaults);
+      })
+      .catch(() => {});
     getPresets().then(setPresets).catch(() => {});
   }, []);
 
@@ -58,7 +70,7 @@ export default function CompareView() {
     setShowAll(false);
     setVotes({});
     try {
-      const c = await createComparison(text, category, getGuestKey());
+      const c = await createComparison(text, category, getGuestKey(), selectedModels);
       setResult(c);
       setOrder(shuffle(c.runs));
     } catch (e) {
@@ -133,6 +145,32 @@ export default function CompareView() {
           placeholder="여기에 프롬프트를 입력하세요. 예) 너는 새침한 고양이 집사야. 오늘 날씨가 좋으니 산책을 권해줘."
           className="w-full resize-y rounded-xl border border-black/10 bg-background p-3 text-sm outline-none focus:border-brand-400 dark:border-white/10"
         />
+
+        {/* provider 별 모델 선택 */}
+        {providers.some((p) => p.models.length > 0) && (
+          <div className="mt-3 grid gap-2 sm:grid-cols-3">
+            {providers.map((p) =>
+              p.models.length > 0 ? (
+                <label key={p.id} className="flex flex-col gap-1 text-xs">
+                  <span className="font-semibold" style={{ color: p.color }}>
+                    {p.displayName} 모델
+                  </span>
+                  <select
+                    value={selectedModels[p.id] ?? ""}
+                    onChange={(e) => setSelectedModels((m) => ({ ...m, [p.id]: e.target.value }))}
+                    className="min-h-10 rounded-lg border border-black/10 bg-background px-2 py-2 text-sm outline-none focus:border-brand-400 dark:border-white/10"
+                  >
+                    {p.models.map((m) => (
+                      <option key={m.arg} value={m.arg}>
+                        {m.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : null,
+            )}
+          </div>
+        )}
 
         <div className="mt-3 flex items-center justify-between gap-3">
           <span className="text-xs text-muted">

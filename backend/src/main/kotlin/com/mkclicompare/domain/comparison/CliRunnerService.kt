@@ -33,12 +33,13 @@ class CliRunnerService(
         val latencyMs: Long,
     )
 
-    fun run(provider: CliProvider, prompt: String): RunResult {
+    /** model 이 주어지면 provider.modelFlag 와 함께 argv 에 주입(whitelist 검증은 호출부 책임). */
+    fun run(provider: CliProvider, prompt: String, model: String? = null): RunResult {
         val started = System.nanoTime()
         return try {
             when (provider.runnerKind) {
                 "api" -> runApi(provider, prompt, started)
-                else -> runCli(provider, prompt, started)
+                else -> runCli(provider, prompt, model, started)
             }
         } catch (e: Exception) {
             log.warn("provider {} 실행 실패: {}", provider.id, e.message)
@@ -47,7 +48,7 @@ class CliRunnerService(
     }
 
     /** 로컬 CLI 바이너리 서브프로세스 실행. */
-    private fun runCli(provider: CliProvider, prompt: String, started: Long): RunResult {
+    private fun runCli(provider: CliProvider, prompt: String, model: String?, started: Long): RunResult {
         val tokens = provider.commandTokens()
         if (tokens.isEmpty()) {
             return RunResult("error", null, "command 가 비어 있습니다.", null, elapsedMs(started))
@@ -61,6 +62,12 @@ class CliRunnerService(
         val argv = buildList {
             add(realBin)
             addAll(tokens.drop(1))
+            // 모델 선택: provider 가 modelFlag 를 가지고 model 이 주어지면 주입(예: --model haiku / -m gpt-5.4).
+            val flag = provider.modelFlag
+            if (!model.isNullOrBlank() && !flag.isNullOrBlank()) {
+                add(flag.trim())
+                add(model)
+            }
             if (outputFile != null) {
                 add(provider.outputFileFlag!!.trim())
                 add(outputFile.absolutePath)

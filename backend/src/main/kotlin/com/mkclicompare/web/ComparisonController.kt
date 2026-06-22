@@ -31,6 +31,7 @@ class ComparisonController(
             category = request.category,
             userId = principal?.userId,
             guestKey = request.guestKey,
+            models = request.models,
         ),
     )
 

@@ -22,6 +22,9 @@ class ComparisonRun(
     @Column(name = "provider_id", nullable = false)
     val providerId: String = "",
 
+    @Column(name = "model")
+    var model: String? = null,   // 실행에 사용된 모델(model_arg). 미지정 시 CLI 기본값.
+
     @Column(name = "status", nullable = false)
     var status: String = "pending",   // pending | ok | error | timeout
 

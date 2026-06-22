@@ -4,12 +4,19 @@ import com.mkclicompare.domain.comparison.Comparison
 import com.mkclicompare.domain.comparison.ComparisonRun
 import com.mkclicompare.domain.comparison.ComparisonService
 import com.mkclicompare.domain.provider.CliProvider
+import com.mkclicompare.domain.provider.ProviderModel
 import com.mkclicompare.domain.provider.PromptPreset
 import com.mkclicompare.domain.vote.VoteService
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Size
 
 // ── Provider / Preset ──
+data class ModelOptionRes(val arg: String, val label: String, val isDefault: Boolean) {
+    companion object {
+        fun from(m: ProviderModel) = ModelOptionRes(m.modelArg, m.label, m.isDefault == 1)
+    }
+}
+
 data class ProviderRes(
     val id: String,
     val displayName: String,
@@ -18,9 +25,19 @@ data class ProviderRes(
     val model: String?,
     val color: String,
     val icon: String?,
+    val models: List<ModelOptionRes>,
 ) {
     companion object {
-        fun from(p: CliProvider) = ProviderRes(p.id, p.displayName, p.vendor, p.runnerKind, p.model, p.color, p.icon)
+        fun from(p: CliProvider, models: List<ProviderModel>) = ProviderRes(
+            id = p.id,
+            displayName = p.displayName,
+            vendor = p.vendor,
+            runnerKind = p.runnerKind,
+            model = p.model,
+            color = p.color,
+            icon = p.icon,
+            models = models.map { ModelOptionRes.from(it) },
+        )
     }
 }
 
@@ -43,10 +60,12 @@ data class CreateComparisonReq(
     val prompt: String,
     val category: String = "general",
     val guestKey: String? = null,
+    val models: Map<String, String>? = null,   // providerId → 선택 모델(model_arg)
 )
 
 data class RunRes(
     val providerId: String,
+    val model: String?,
     val status: String,
     val responseText: String?,
     val errorText: String?,
@@ -57,6 +76,7 @@ data class RunRes(
     companion object {
         fun from(r: ComparisonRun) = RunRes(
             providerId = r.providerId,
+            model = r.model,
             status = r.status,
             responseText = r.responseText,
             errorText = r.errorText,

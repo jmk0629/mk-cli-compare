@@ -38,6 +38,9 @@ class CliProvider(
     @Column(name = "model")
     val model: String? = null,
 
+    @Column(name = "model_flag")
+    val modelFlag: String? = null,    // 모델 지정 플래그(claude/agy: --model, codex: -m). null 이면 모델 선택 미지원.
+
     @Column(name = "color", nullable = false)
     val color: String = "#6366f1",
 

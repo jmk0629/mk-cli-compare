@@ -31,12 +31,13 @@ class ComparisonService(
 
     data class ComparisonResult(val comparison: Comparison, val runs: List<ComparisonRun>)
 
-    /** 비교 실행. 게스트면 userId=null + guestKey. */
+    /** 비교 실행. 게스트면 userId=null + guestKey. models: providerId → 선택 모델(model_arg). */
     fun createAndRun(
         prompt: String,
         category: String,
         userId: Long?,
         guestKey: String?,
+        models: Map<String, String>? = null,
     ): ComparisonResult {
         val cleaned = prompt.trim()
         require(cleaned.isNotBlank()) { "프롬프트가 비어 있습니다." }
@@ -44,6 +45,14 @@ class ComparisonService(
 
         val providers = providerService.enabledProviders()
         require(providers.isNotEmpty()) { "활성화된 provider 가 없습니다." }
+
+        // 모델 whitelist 검증: 요청 모델이 provider 카탈로그에 있을 때만 채택(임의 문자열 차단).
+        val allowedModels = providerService.modelsByProvider()
+        val resolvedModels: Map<String, String?> = providers.associate { p ->
+            val requested = models?.get(p.id)
+            val valid = requested?.takeIf { req -> allowedModels[p.id]?.any { it.modelArg == req } == true }
+            p.id to valid
+        }
 
         val comparison = saveComparison(
             Comparison(
@@ -57,7 +66,7 @@ class ComparisonService(
         )
         val comparisonId = requireNotNull(comparison.id)
 
-        val results = execute(providers, cleaned)
+        val results = execute(providers, cleaned, resolvedModels)
 
         val now = Instant.now().toString()
         val runs = providers.map { provider ->
@@ -66,6 +75,7 @@ class ComparisonService(
                 ComparisonRun(
                     comparisonId = comparisonId,
                     providerId = provider.id,
+                    model = resolvedModels[provider.id],
                     status = r?.status ?: "error",
                     responseText = r?.responseText,
                     errorText = r?.errorText ?: (if (r == null) "실행 결과 없음" else null),
@@ -88,14 +98,15 @@ class ComparisonService(
     private fun execute(
         providers: List<CliProvider>,
         prompt: String,
+        models: Map<String, String?>,
     ): Map<String, CliRunnerService.RunResult> {
         if (providers.size <= 1 || !cliProperties.parallel) {
-            return providers.associate { p -> p.id to cliRunner.run(p, prompt) }
+            return providers.associate { p -> p.id to cliRunner.run(p, prompt, models[p.id]) }
         }
         val pool = Executors.newFixedThreadPool(providers.size)
         return try {
             val futures = providers.associate { p ->
-                p.id to CompletableFuture.supplyAsync({ cliRunner.run(p, prompt) }, pool)
+                p.id to CompletableFuture.supplyAsync({ cliRunner.run(p, prompt, models[p.id]) }, pool)
             }
             futures.mapValues { (id, f) ->
                 runCatching { f.get() }.getOrElse {

@@ -73,6 +73,7 @@ export default function ComparisonDetailPage() {
               <thead>
                 <tr className="border-b border-black/10 text-left text-xs text-muted dark:border-white/10">
                   <th className="px-4 py-3 font-semibold">Provider</th>
+                  <th className="px-4 py-3 font-semibold">모델</th>
                   <th className="px-4 py-3 font-semibold">상태</th>
                   <th className="px-4 py-3 font-semibold">응답시간</th>
                   <th className="px-4 py-3 font-semibold">길이</th>
@@ -88,6 +89,7 @@ export default function ComparisonDetailPage() {
                         {providerEmoji(r.providerId)} {p?.displayName ?? r.providerId}
                         {fastest === r.providerId && <span className="ml-1 text-xs text-brand-600">⚡최속</span>}
                       </td>
+                      <td className="px-4 py-3 text-muted">{r.model ?? "기본"}</td>
                       <td className="px-4 py-3"><StatusPill status={r.status} /></td>
                       <td className="px-4 py-3">{r.latencyMs != null ? `${(r.latencyMs / 1000).toFixed(1)}s` : "—"}</td>
                       <td className="px-4 py-3">{r.charCount != null ? `${r.charCount}자` : "—"}</td>
@@ -116,9 +118,12 @@ function DetailCard({ run, provider }: { run: Run; provider?: Provider }) {
   return (
     <div className="flex flex-col rounded-2xl border border-black/10 bg-card p-4 dark:border-white/10">
       <div className="mb-2 flex items-center justify-between">
-        <span className="flex items-center gap-2 font-bold" style={{ color: provider?.color }}>
-          <span aria-hidden>{providerEmoji(run.providerId)}</span>
-          {provider?.displayName ?? run.providerId}
+        <span className="flex flex-col gap-0.5">
+          <span className="flex items-center gap-2 font-bold" style={{ color: provider?.color }}>
+            <span aria-hidden>{providerEmoji(run.providerId)}</span>
+            {provider?.displayName ?? run.providerId}
+          </span>
+          {run.model && <span className="text-xs text-muted">{run.model}</span>}
         </span>
         <span className="text-xs text-muted">
           {run.latencyMs != null ? `${(run.latencyMs / 1000).toFixed(1)}s` : ""}

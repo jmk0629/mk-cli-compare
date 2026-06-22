@@ -71,10 +71,11 @@ export const createComparison = (
   prompt: string,
   category: string,
   guestKey: string,
+  models?: Record<string, string>,
 ): Promise<Comparison> =>
   request("/api/comparisons", ComparisonSchema, {
     method: "POST",
-    body: JSON.stringify({ prompt, category, guestKey }),
+    body: JSON.stringify({ prompt, category, guestKey, models }),
   });
 
 export const getComparison = (id: number): Promise<Comparison> =>

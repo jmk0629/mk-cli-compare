@@ -2,6 +2,13 @@ import { z } from "zod";
 
 /** 백엔드 응답 zod 스키마 — api.ts 가 런타임 검증에 사용. */
 
+export const ModelOptionSchema = z.object({
+  arg: z.string(),
+  label: z.string(),
+  isDefault: z.boolean(),
+});
+export type ModelOption = z.infer<typeof ModelOptionSchema>;
+
 export const ProviderSchema = z.object({
   id: z.string(),
   displayName: z.string(),
@@ -10,6 +17,7 @@ export const ProviderSchema = z.object({
   model: z.string().nullable(),
   color: z.string(),
   icon: z.string().nullable(),
+  models: z.array(ModelOptionSchema),
 });
 export type Provider = z.infer<typeof ProviderSchema>;
 export const ProviderListSchema = z.array(ProviderSchema);
@@ -26,6 +34,7 @@ export const PresetListSchema = z.array(PresetSchema);
 
 export const RunSchema = z.object({
   providerId: z.string(),
+  model: z.string().nullable(),
   status: z.string(), // ok | error | timeout | pending
   responseText: z.string().nullable(),
   errorText: z.string().nullable(),

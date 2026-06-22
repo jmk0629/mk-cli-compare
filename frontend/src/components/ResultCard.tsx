@@ -27,10 +27,13 @@ export default function ResultCard({ run, index, provider, revealed, isWinner, c
       style={isWinner ? { boxShadow: `0 0 0 1px ${accent}` } : undefined}
     >
       <div className="mb-2 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 font-bold" style={{ color: accent }}>
-          {revealed && <span aria-hidden>{providerEmoji(run.providerId)}</span>}
-          <span>{label}</span>
-          {isWinner && <span className="text-xs font-extrabold text-brand-600">👑 승자</span>}
+        <div className="flex flex-col gap-0.5">
+          <div className="flex items-center gap-2 font-bold" style={{ color: accent }}>
+            {revealed && <span aria-hidden>{providerEmoji(run.providerId)}</span>}
+            <span>{label}</span>
+            {isWinner && <span className="text-xs font-extrabold text-brand-600">👑 승자</span>}
+          </div>
+          {revealed && run.model && <span className="text-xs text-muted">{run.model}</span>}
         </div>
         <StatusBadge status={run.status} />
       </div>
